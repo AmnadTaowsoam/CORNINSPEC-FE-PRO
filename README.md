@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # CONINSPEC-PRO
 
 ## docker-compose 
