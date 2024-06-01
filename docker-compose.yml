@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: ./
+    env_file:
+      - .env
+    ports:
+      - "8005:80"
+    networks:
+      - frontend-net
+    restart: on-failure
+
+networks:
+  frontend-net:
+    driver: bridge
