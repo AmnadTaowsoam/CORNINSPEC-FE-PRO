@@ -1,13 +1,11 @@
 import { useState, useCallback } from 'react';
 
 const useResultToSAP = () => {
-  const [result, setResult] = useState(null);
+  const [resultSent, setResultSent] = useState(null);
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  // Accessing the base API URL from environment variables
+  const [isLoadingSAP, setIsLoadingSAP] = useState(false);
   const apiUrl = import.meta.env.VITE_REACT_APP_RESULT_TO_SAP_ENDPOINT || 'http://localhost:8008';
 
-  // Login function to retrieve and store tokens
   const login = useCallback(async () => {
     const loginUrl = `${apiUrl}/api/auth/login`;
     const credentials = {
@@ -34,48 +32,56 @@ const useResultToSAP = () => {
       return true;
     } catch (error) {
       console.error('Login error:', error.message);
-      setError(`Login error: ${error.message}`);
       return false;
     }
   }, [apiUrl]);
   
-  const fetchInterfaceResult = useCallback(async (inslot, batch, material, plant, operationno) => {
-    setIsLoading(true);
+  const sendResultToSAP = useCallback(async (inslot, batch, material, plant, operationno) => {
+    setIsLoadingSAP(true);
     setError('');
 
-    const loggedIn = await login();
-    if (!loggedIn) {
-      setIsLoading(false);
-      return;
-    }
-
-    const queryUrl = `${apiUrl}/interfaces/search?inslot=${inslot}&batch=${batch}&material=${material}&plant=${plant}&operationno=${operationno}`;
-    const accessToken = sessionStorage.getItem('sapResultAccessToken');
-
     try {
-      const response = await fetch(queryUrl, {
-        method: 'GET',
+      const loggedIn = await login();
+      if (!loggedIn) {
+        setError('Login failed');
+        setIsLoadingSAP(false);
+        return;
+      }
+
+      const sendUrl = `${apiUrl}/interfaces/physical-data`;
+      const accessToken = sessionStorage.getItem('sapResultAccessToken');
+      const payload = {
+        inslot,
+        batch,
+        material,
+        plant,
+        operationno
+      };
+
+      const response = await fetch(sendUrl, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`
         },
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Something went wrong');
+        throw new Error(errorData.message || 'Failed to send result to SAP');
       }
 
       const data = await response.json();
-      setResult(data);
+      setResultSent(data);
     } catch (error) {
-      setError(`Failed to fetch: ${error.message}`);
+      setError(`Failed to send: ${error.message}`);
     } finally {
-      setIsLoading(false);
+      setIsLoadingSAP(false);
     }
   }, [apiUrl, login]);
 
-  return { fetchInterfaceResult, result, error, isLoading };
+  return { sendResultToSAP, resultSent, error, isLoadingSAP };
 };
 
 export default useResultToSAP;

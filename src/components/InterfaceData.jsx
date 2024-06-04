@@ -1,8 +1,10 @@
 import React, { useEffect } from 'react';
 import useInterfaceResult from '../services/InterfaceResultAPI';
+import useResultToSAP from '../services/resultToSAPApi';
 
 function InterfaceData({ refreshFlag, interfaceData, clearAll }) {
-  const { fetchInterfaceResult, startInterface, result, error, isLoading } = useInterfaceResult();
+  const { fetchInterfaceResult, result, error, isLoading } = useInterfaceResult();
+  const { sendResultToSAP, resultSent, errorSAP, isLoadingSAP } = useResultToSAP();
 
   useEffect(() => {
     const fetchData = () => {
@@ -16,7 +18,6 @@ function InterfaceData({ refreshFlag, interfaceData, clearAll }) {
     };
 
     fetchData(); // Initial fetch
-
   }, [fetchInterfaceResult, refreshFlag, interfaceData]);  // Dependency array includes refreshFlag
 
   if (isLoading) {
@@ -27,29 +28,20 @@ function InterfaceData({ refreshFlag, interfaceData, clearAll }) {
   }
 
   const calculateAverage = (item) => {
-    const params = ["phys003", "phys004", "phys005", "phys006", "phys007", "phys008", "phys009"];
+    const params = ["phys0003", "phys0004", "phys0005", "phys0006", "phys0007", "phys0008", "phys0009"];
     const total = params.reduce((sum, param) => sum + parseFloat(item[param] || 0), 0);
     return (total / params.length).toFixed(2);
   };
 
-  const clearStates = () => {
-    setImage(sample_image);
-    setSampleWeight(0);
-    setBoundingBoxes([]);
-    setLogMessage([]);
-    setError("");
-    setLogMessage("Ready to capture");
-    clearAll();
-  };
-
   const handleStartInterface = () => {
-    startInterface(
+    sendResultToSAP(
       interfaceData.inslot,
       interfaceData.batch,
       interfaceData.material,
       interfaceData.plant,
       interfaceData.operationNo
     );
+    console.log('sendResultToSAP:', sendResultToSAP)
   };
 
   return (
@@ -66,7 +58,7 @@ function InterfaceData({ refreshFlag, interfaceData, clearAll }) {
             </tr>
           </thead>
           <tbody>
-            {["phys003", "phys004", "phys005", "phys006", "phys007", "phys008", "phys009"].map((param) => (
+            {["phys0003", "phys0004", "phys0005", "phys0006", "phys0007", "phys0008", "phys0009"].map((param) => (
               <tr key={param}>
                 <td>{param.toUpperCase()}</td>
                 {result?.map((item, index) => (
@@ -79,8 +71,11 @@ function InterfaceData({ refreshFlag, interfaceData, clearAll }) {
         </table>
       </div>
       <div className="flex justify-end mt-4">
-        <button onClick={handleStartInterface} className="btn btn-outline btn-primary rounded-2xl text-sm">Start Interface</button>
+        <button onClick={handleStartInterface} className="btn btn-outline btn-primary rounded-2xl text-sm">
+          {isLoadingSAP ? 'Sending...' : 'Start Interface'}
+        </button>
       </div>
+      {errorSAP && <div className="text-red-500 mt-2">Error: {errorSAP}</div>}
     </div>
   );
 }
